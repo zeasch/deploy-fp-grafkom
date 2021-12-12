@@ -64,58 +64,63 @@
 
         let sprite = new THREE.TextureLoader().load( 'star.png' );
         let starMaterial = new THREE.PointsMaterial({
-          //color: 0xaaaaaa,
-          size: 0.3,
+          color: 0xffffff,
+          //shading: THREE.flatShading,
+          alphaTest: 0.1,
+          size: 0.5,
           map: sprite
         });
 
-      stars = new THREE.Points(starGeo,starMaterial);
-      scene.add(stars);
+        stars = new THREE.Points(starGeo,starMaterial);
+        scene.add(stars);
 
-      let loader = new THREE.TextureLoader();
-      loader.load("smoke.png", function(texture){
-        cloudGeo = new THREE.PlaneBufferGeometry(500,500);
-        cloudMaterial = new THREE.MeshLambertMaterial({
-          map:texture,
-          transparent: true
+        let loader = new THREE.TextureLoader();
+        loader.load("smoke.png", function(texture){
+          cloudGeo = new THREE.PlaneBufferGeometry(500,500);
+          cloudMaterial = new THREE.MeshLambertMaterial({
+            map: texture,
+            //alphaTest: 0.0001,
+            transparent: true
+            //reflectivity:0
+          });
+
+          for(let p=0; p<40; p++) {
+            let cloud = new THREE.Mesh(cloudGeo, cloudMaterial);
+              cloud.position.set(
+                Math.random()*800 - 400,
+                Math.random()*600 - 300,
+                Math.random()*700 - 500
+              );
+              cloud.rotation.x = 1.16;
+              cloud.rotation.y = -0.12;
+              cloud.rotation.z = Math.random()*2*Math.PI;
+              cloud.velocity = 0;
+              cloud.acceleration = 0.003;
+              cloud.material.opacity = 0.55;
+              cloudParticles.push(cloud);
+              scene.add(cloud);
+          }
         });
 
-        for(let p=0; p<40; p++) {
-          let cloud = new THREE.Mesh(cloudGeo, cloudMaterial);
-            cloud.position.set(
-              Math.random()*800 - 400,
-              Math.random()*600 - 300,
-              Math.random()*700 - 500
-            );
-            cloud.rotation.x = 1.16;
-            cloud.rotation.y = -0.12;
-            cloud.rotation.z = Math.random()*2*Math.PI;
-            cloud.material.opacity = 0.55;
-            cloudParticles.push(cloud);
-            scene.add(cloud);
-        }
-      });
-
-      loader.load("stars.jpg", function(texture){
-
+        loader.load("stars.jpg", function(texture){
           const textureEffect = new POSTPROCESSING.TextureEffect({
             blendFunction: POSTPROCESSING.BlendFunction.COLOR_DODGE,
             texture: texture
           });
           textureEffect.blendMode.opacity.value = 0.5;
 
-          const bloomEffect = new POSTPROCESSING.BloomEffect({
+          /*const bloomEffect = new POSTPROCESSING.BloomEffect({
                 blendFunction: POSTPROCESSING.BlendFunction.COLOR_DODGE,
                 kernelSize: POSTPROCESSING.KernelSize.SMALL,
                 useLuminanceFilter: true,
                 luminanceThreshold: 0.5,
                 luminanceSmoothing: 0.6
-              });
-          bloomEffect.blendMode.opacity.value = 1.5;
+          });
+          bloomEffect.blendMode.opacity.value = 1.5;*/
 
           let effectPass = new POSTPROCESSING.EffectPass(
             camera,
-            bloomEffect,
+            //bloomEffect,
             textureEffect
           );
           effectPass.renderToScreen = true;
@@ -129,78 +134,74 @@
           animate();
         });
       }
+
       function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
-      /*function render() {
-        
-        requestAnimationFrame(render);
-      }*/
-
+      
       function animate() {
         cloudParticles.forEach(p => {
-          p.rotation.z -=0.001;
+          //if(p.rotation.z < 3)
+           p.rotation.z -= p.acceleration;
+          
+          p.x -= p.velocity;
+          
+          if (p.y < -200) {
+            p.y = 200;
+            p.velocity = 0;
+          }
         });
         composer.render(0.1);
-      starGeo.vertices.forEach(p => {
-        p.velocity += p.acceleration
-        p.y -= p.velocity;
+        starGeo.vertices.forEach(p => {
+          p.color = 0x000000;
+          p.velocity += p.acceleration;
+          p.y -= p.velocity;
+          
+          if (p.y < -200) {
+            p.y = 200;
+            p.velocity = 0;
+          }
+        });
+        starGeo.verticesNeedUpdate = true;
+        stars.rotation.y +=0.002;
+      
+        renderer.render(scene, camera);
+        req = requestAnimationFrame(animate);
+      }
+
+      let paused=0;
+      document.addEventListener("keydown", ({ code }) => {
+        if (code === "Space") {
+          if (paused) {
+            req = requestAnimationFrame(animate);
+          } else {
+            cancelAnimationFrame(req);
+          }
+
+          paused = !paused;
+        }
+
+        if (code === "ArrowDown") {
+          starGeo.vertices.forEach(p => {
+            p.acceleration = Math.max(0, p.acceleration - 0.005);
+          });
+          cloudParticles.forEach(p => {
+            p.acceleration = Math.max(0.001, p.acceleration - 0.0005);
+          }); 
+        }
+
+        if (code === "ArrowUp") {
+          starGeo.vertices.forEach(p => {
+            p.acceleration = Math.min(0.2, p.acceleration + 0.005);
+          });
+          cloudParticles.forEach(p => {
+            p.acceleration = Math.min(0.02, p.acceleration + 0.0005);
+          });
         
-        if (p.y < -200) {
-          p.y = 200;
-          p.velocity = 0;
         }
       });
-      starGeo.verticesNeedUpdate = true;
-      stars.rotation.y +=0.002;
-    
-      renderer.render(scene, camera);
-      req = requestAnimationFrame(animate);
-    }
-
-    let paused=0;
-    document.addEventListener("keydown", ({ code }) => {
-  if (code === "Space") {
-    if (paused) {
-      req = requestAnimationFrame(animate);
-    } else {
-      cancelAnimationFrame(req);
-    }
-
-    paused = !paused;
-  }
-
-  if (code === "ArrowDown") {
-    starGeo.vertices.forEach(p => {
-      p.velocity -= p.acceleration;
-        p.y -= p.velocity;
-        
-        if (p.y < -200) {
-          p.y = 200;
-          p.velocity = 0;
-        }
-      });
-      starGeo.verticesNeedUpdate = true;
-    
-    console.log(p.velocity);
-  }
-
-  if (code === "ArrowUp") {
-    starGeo.vertices.forEach(p => {
-        p.velocity += p.acceleration
-        p.y -= p.velocity;
-        
-        if (p.y < -200) {
-          p.y = 200;
-          p.velocity = 0;
-        }
-      });
-      starGeo.verticesNeedUpdate = true;
-    console.log(p.velocity);
-  }
-});
 
       init();
     </script>
