@@ -656,6 +656,7 @@ element13.addEventListener("click", reload);
 function reload() {
     camera.position.set(-1000, 500, 5000);
     document.getElementById('endTitle').style.display = 'none';
+    document.getElementById('endPar').style.display = 'none';
     document.getElementById('button-start').style.display = 'none';
     document.getElementById('mainTitle').style.display = 'block';
     document.getElementById('mainPar').style.display = 'block';
