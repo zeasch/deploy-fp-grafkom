@@ -17,6 +17,7 @@
     <script src="three.min.js"></script>
     <script src="postprocessing.min.js"></script>
     <script>
+      
       let scene, camera, cloudParticles = [],composer, req, starGeo;
 
       function init() {
@@ -47,8 +48,10 @@
         renderer = new THREE.WebGLRenderer();
         renderer.setClearColor( 0x000000, 0 );
         renderer.setSize(window.innerWidth,window.innerHeight);
-        //scene.fog = new THREE.FogExp2(0x3677ac, 0.001);
+        scene.fog = new THREE.FogExp2(0xffffff, 0.0015);
         document.body.appendChild(renderer.domElement);
+
+        //controls = new OrbitControls(camera, renderer.domElement);
 
         starGeo = new THREE.Geometry();
         for(let i=0;i<6000;i++) {
@@ -57,7 +60,7 @@
             Math.random() * 600 - 300,
             Math.random() * 600 - 300
           );
-          star.velocity = 0;
+          star.velocity = 0.01;
           star.acceleration = 0.02;
           starGeo.vertices.push(star);
         }
@@ -109,18 +112,18 @@
           });
           textureEffect.blendMode.opacity.value = 0.5;
 
-          /*const bloomEffect = new POSTPROCESSING.BloomEffect({
+          const bloomEffect = new POSTPROCESSING.BloomEffect({
                 blendFunction: POSTPROCESSING.BlendFunction.COLOR_DODGE,
                 kernelSize: POSTPROCESSING.KernelSize.SMALL,
                 useLuminanceFilter: true,
                 luminanceThreshold: 0.5,
                 luminanceSmoothing: 0.6
           });
-          bloomEffect.blendMode.opacity.value = 1.5;*/
+          bloomEffect.blendMode.opacity.value = 1.5;
 
           let effectPass = new POSTPROCESSING.EffectPass(
             camera,
-            //bloomEffect,
+            bloomEffect,
             textureEffect
           );
           effectPass.renderToScreen = true;
@@ -141,10 +144,15 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
       
-      function animate() {
+      function animate(){
+        render();
+        req = requestAnimationFrame(animate);
+        
+      }
+
+      function render() {
         cloudParticles.forEach(p => {
-          //if(p.rotation.z < 3)
-           p.rotation.z -= p.acceleration;
+          p.rotation.z -= p.acceleration;
           
           p.x -= p.velocity;
           
@@ -160,17 +168,17 @@
           p.y -= p.velocity;
           
           if (p.y < -200) {
-            p.y = 200;
-            p.velocity = 0;
+            p.y = Math.random()*600 - 300;
+            p.velocity = 0.01 + p.acceleration;
           }
         });
         starGeo.verticesNeedUpdate = true;
         stars.rotation.y +=0.002;
       
         renderer.render(scene, camera);
-        req = requestAnimationFrame(animate);
       }
 
+      
       let paused=0;
       document.addEventListener("keydown", ({ code }) => {
         if (code === "Space") {
@@ -199,7 +207,7 @@
           cloudParticles.forEach(p => {
             p.acceleration = Math.min(0.02, p.acceleration + 0.0005);
           });
-        
+
         }
       });
 
